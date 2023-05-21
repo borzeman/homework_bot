@@ -39,10 +39,7 @@ logger.addHandler(handler)
 
 def check_tokens():
     """Функция проверяет доступность переменных окружения."""
-    if PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-        logging.debug('токены и id чата на месте')
-        return True
-    return False
+    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
 def get_api_answer(timestamp):
@@ -54,26 +51,20 @@ def get_api_answer(timestamp):
             return response.json()
         else:
             logging.error(f'Ошибка запроса к ya. Код: {response.status_code}')
-            telegram.Bot.send_message(token=TELEGRAM_TOKEN,
-                                      text='Сбой подключения к API')
+            return None
     except requests.exceptions.RequestException as error:
-        logging.error('Ошибка при попытке подключения к эндпоинту')
-        telegram.Bot.send_message(token=TELEGRAM_TOKEN, text='Сбой подкл.')
-        print(f"Ошибка во время выполнения запроса: {error}")
+        logging.error(f'Ошибка {error} при попытке подключения к эндпоинту')
+        return None
 
 
 def check_response(response):
     """Функция проверяет ответ API на соответствие документации."""
     if not isinstance(response, dict):
         logging.error('неверный тип ответа от API')
-        telegram.Bot.send_message(token=TELEGRAM_TOKEN,
-                                  text='неверный ответ api')
         raise TypeError('В документации написано по-другому!')
 
     if 'homeworks' not in response:
         logging.error('в словаре отсутствует ключ')
-        telegram.Bot.send_message(token=TELEGRAM_TOKEN,
-                                  text='отсутствует ключ')
         raise KeyError('В ответе нет ключа homeworks')
 
     homeworks = response['homeworks']
@@ -121,16 +112,21 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp)
+            if response is None:
+                telegram.Bot.send_message(token=TELEGRAM_TOKEN,
+                                          text='Сбой подключения к API')
+                continue
+
             homework = check_response(response)
             if homework:
                 message = parse_status(homework)
             else:
                 message = 'Работа не взята на проверку'
             send_message(bot, message)
-            print('пока нормально работает))')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.error(message)
+            telegram.Bot.send_message(token=TELEGRAM_TOKEN, text=message)
         finally:
             time.sleep(RETRY_PERIOD)
 
