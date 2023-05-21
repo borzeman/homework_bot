@@ -51,7 +51,7 @@ def get_api_answer(timestamp):
             return response.json()
         else:
             logging.error(f'Ошибка запроса к ya. Код: {response.status_code}')
-            return None
+            raise ValueError('код возврата != 200')
     except requests.exceptions.RequestException as error:
         logging.error(f'Ошибка {error} при попытке подключения к эндпоинту')
         return None
