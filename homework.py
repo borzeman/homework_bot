@@ -54,7 +54,7 @@ def get_api_answer(timestamp):
             raise ValueError('код возврата != 200')
     except requests.exceptions.RequestException as error:
         logging.error(f'Ошибка {error} при попытке подключения к эндпоинту')
-        return None
+        raise AssertionError('Не удалось выполнить запрос к API') from error
 
 
 def check_response(response):
@@ -112,11 +112,6 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp)
-            if response is None:
-                telegram.Bot.send_message(token=TELEGRAM_TOKEN,
-                                          text='Сбой подключения к API')
-                continue
-
             homework = check_response(response)
             if homework:
                 message = parse_status(homework)
